@@ -1,26 +1,30 @@
 from crypt_module import *
 import socket, sys, threading, pickle
 
-addr = '127.0.0.1'
+addr = ''
 port = 4444
-maxUsers = 10
+maxUsers = 0
+serverName = ''
+buffSize = 1024
 
-
-# Creates socket for connecting
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# binds the socket to the address and port
-server.bind((addr, port))
-
-# listens for connections
-server.listen(maxUsers)
-
-print('[*] Server initialized\n[*] Listening for connections...')
 
 # list to contain client connections
 clientList = []
 
-pub, priv = buildKeys('keys')
+def loadConfig(path):
+    serverInfo = []
+    try:
+        with open(path, 'r') as file:
+            for item in file.readlines():
+                serverInfo.append(item)
+        serverName = serverInfo[0]
+        addr = serverInfo[1]
+        port = serverInfo[2]
+        buffSize = serverInfo[3]
+        maxUsers = serverInfo[4]
+    except:
+        print("[!] Could not load server from config")
+
 
 # Handles client connections
 def handleClient(conn, userAddr):
@@ -67,6 +71,19 @@ def broadcast(msg, conn):
                     clientList.remove(conn)
 
 if __name__ == '__main__':
+
+    configPath = str(input("Enter path for server seed: "))
+    loadConfig(configPath)
+
+    # Creates socket for connecting
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # binds the socket to the address and port
+    server.bind((addr, port))
+
+    # listens for connections
+    server.listen(maxUsers)
+    print('[*] Server initialized\n[*] Listening for connections...')
 
     while True:
 

@@ -9,8 +9,6 @@ port = 4444
 
 server.connect((serverAddr, port))
 
-pub, priv = buildKeys('keys')
-
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -74,6 +72,11 @@ def send(ui, msg, event=None):
     ui.output.append('<Me> '+msg)
     msg = encryptMsg(msg, pub)
     server.send(msg)
+
+
+# loads server with keys using file
+def loadKey(path):
+    pass
 
 if __name__ == "__main__":
 
