@@ -1,30 +1,8 @@
 from crypt_module import *
-import socket, sys, threading, pickle
-
-addr = ''
-port = 4444
-maxUsers = 0
-serverName = ''
-buffSize = 1024
-
+import socket, sys, threading, pickle, json
 
 # list to contain client connections
 clientList = []
-
-def loadConfig(path):
-    serverInfo = []
-    try:
-        with open(path, 'r') as file:
-            for item in file.readlines():
-                serverInfo.append(item)
-        serverName = serverInfo[0]
-        addr = serverInfo[1]
-        port = serverInfo[2]
-        buffSize = serverInfo[3]
-        maxUsers = serverInfo[4]
-    except:
-        print("[!] Could not load server from config")
-
 
 # Handles client connections
 def handleClient(conn, userAddr):
@@ -32,13 +10,9 @@ def handleClient(conn, userAddr):
     while True:
 
         try:
-            msg = conn.recv(2048)
-            print(msg)
+            msg = conn.recv(seed['buffer_size'])
 
             if msg:
-
-                # prints the message and the user's id
-                print('<%s> %s' % (userAddr[0], msg))
 
                 # couples data with address
                 data = (msg, userAddr[0])
@@ -70,30 +44,61 @@ def broadcast(msg, conn):
                 if conn in clientList:
                     clientList.remove(conn)
 
-if __name__ == '__main__':
+# Loads the public and private key from the server seed
+def loadKeys(path):
 
-    configPath = str(input("Enter path for server seed: "))
-    loadConfig(configPath)
+    # for the values needed to build keys
+    keyInfo = []
 
-    # Creates socket for connecting
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    with open(path, 'r') as file:
 
-    # binds the socket to the address and port
-    server.bind((addr, port))
+        data = json.load(file)
 
-    # listens for connections
-    server.listen(maxUsers)
-    print('[*] Server initialized\n[*] Listening for connections...')
+        for val in data['key']:
+            keyInfo.append(data['key'][val])
 
-    while True:
+    pub = rsa.PublicKey(keyInfo[0], keyInfo[1])
+    priv = rsa.PrivateKey(keyInfo[0], keyInfo[1], keyInfo[2], keyInfo[3], keyInfo[4])
 
-        conn, clientAddr = server.accept()
+    return pub, priv
 
-        clientList.append(conn)
+# loads info from server seed and returns dictionary of it
+def loadSeed(path):
 
-        print('%s has connected' % (clientAddr[0],))
+    # dictionary with seed info
+    seed = {}
 
-        threading.Thread(target=handleClient, args=(conn, clientAddr,)).start()
+    with open(path, 'r') as file:
+        data = json.load(file)
+        seed = data['seed']
 
-    conn.close()
-    server.close()
+    return seed
+
+
+# grabs the server info from seed
+seedPath = str(input('Enter path for server seed: '))
+seed = loadSeed(seedPath)
+pub, priv = loadKeys(seedPath)
+
+# Creates socket for connecting
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# binds the socket to the address and port
+server.bind((seed['address'], seed['port']))
+
+# listens for connections
+server.listen(seed['max_users'])
+print('[*] Server initialized\n[*] Listening for connections...')
+
+while True:
+
+    conn, clientAddr = server.accept()
+
+    clientList.append(conn)
+
+    print('%s has connected' % (clientAddr[0],))
+
+    threading.Thread(target=handleClient, args=(conn, clientAddr,)).start()
+
+conn.close()
+server.close()

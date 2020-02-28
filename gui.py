@@ -1,13 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from crypt_module import *
-import socket, threading, sys, rsa, pickle
+import socket, threading, sys, rsa, pickle, json
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-serverAddr = '127.0.0.1'
-port = 4444
-
-server.connect((serverAddr, port))
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -43,6 +37,10 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "Crypt Chat"))
         self.enterBtn.setText(_translate("MainWindow", "Send"))
 
+    def changeTitle(self, MainWindow, title):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", title))
+
     def getMsg(self):
 
         msg = self.msgIn.text()
@@ -53,6 +51,10 @@ class Ui_MainWindow(object):
 
         else:
             threading.Thread(target=send, args=(self, msg,)).start()
+
+    def getPath(self, MainWindow):
+        path = QtWidgets.QFileDialog.getOpenFileName(MainWindow, 'Load', './', "JSON Files (*.json)", '')
+        return path[0]
 
 def receive(ui):
     while True:
@@ -73,20 +75,45 @@ def send(ui, msg, event=None):
     msg = encryptMsg(msg, pub)
     server.send(msg)
 
-
 # loads server with keys using file
-def loadKey(path):
-    pass
+def loadSeed(path):
 
-if __name__ == "__main__":
+    # values for building keys
+    keyVals = {}
 
-    app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    threading.Thread(target=receive, args=(ui,)).start()
-    MainWindow.show()
+    # info for connecting to server
+    serverInfo = {}
 
-    sys.exit(app.exec_())
+    with open(path, 'r') as file:
+        data = json.load(file)
+        keyVals = data['key']
+        serverInfo = data['seed']
+
+    return (serverInfo, keyVals)
+
+
+app = QtWidgets.QApplication(sys.argv)
+MainWindow = QtWidgets.QMainWindow()
+ui = Ui_MainWindow()
+ui.setupUi(MainWindow)
+
+# grabs path for seed
+seedPath = ui.getPath(MainWindow)
+
+# loads all the seed data
+seed = loadSeed(seedPath)
+pub = rsa.PublicKey(seed[1]['n'], seed[1]['e'])
+priv = rsa.PrivateKey(seed[1]['n'], seed[1]['e'], seed[1]['d'], seed[1]['p'], seed[1]['q'])
+
+ui.changeTitle(MainWindow, seed[0]['name'])
+
+# connects to server
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.connect((seed[0]['address'], seed[0]['port']))
+
+threading.Thread(target=receive, args=(ui,)).start()
+MainWindow.show()
+
+sys.exit(app.exec_())
 
 server.close()

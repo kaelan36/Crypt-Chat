@@ -59,8 +59,11 @@ def encryptMsg(msg, key):
 # Decrypts an encrypted string using a private key
 def decryptMsg(msg, key):
 
-    msg = rsa.decrypt(msg, key)
-    msg = msg.decode('utf8')
+    try:
+        msg = rsa.decrypt(msg, key)
+        msg = msg.decode('utf8')
+    except Exception as e:
+        print('[!] Error was raised while decrypting: ' + str(e))
 
     return msg
 

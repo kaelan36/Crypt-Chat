@@ -2,12 +2,7 @@
 Creates a server configuration file to be read when running server.py and also creates a key with it
 """
 from crypt_module import *
-
-# list for server info
-info = ['','','','','']
-
-# list containing values for building keys
-keyVals = ['','','','','']
+import json
 
 # gets info for server connection
 def getInfo():
@@ -27,35 +22,45 @@ def getInfo():
         except ValueError:
             print('[!] Not a valid port number')
 
-# writes all data to file
-def writeData(data, path):
 
-    with open(path, 'w') as file:
+# writes all data to json file
+def writeData(data):
+    try:
+        with open(data['seed']['name'].lower()+'.json', 'w') as file:
+            json.dump(data, file)
+            print('[*] Data was written to file')
+    except Exception as e:
+        print('[!] Encountered error while writing to file')
+        print(e)
 
-        for item in data:
-            item = str(item)
-            file.write(item+'\n')
 
+# grabs key info and stores in dictionary to be returned, takes in a private key because they contain all data
+def getKeyInfo(key):
 
-if __name__ == '__main__':
+    info = {}
 
-    info[0], info[1], info[2], info[3], info[4] = getInfo()
+    values = ['n', 'e', 'd', 'p', 'q']
 
-    pub, priv = genKeys(info[3])
+    for c in values:
+        info[c] = key[c]
 
-    keyVals[0] = str(pub['n'])
-    keyVals[1] = str(pub['e'])
-    keyVals[2] = str(priv['d'])
-    keyVals[3] = str(priv['p'])
-    keyVals[4] = str(priv['q'])
+    return info
 
-    for item in keyVals:
-        info.append(item)
+# dictionary for json file of data
+data = {}
 
-    writeData(info, info[0]+'_seed')
+# dictionary for server building information
+seedInfo = {}
 
-    # key for accessing server
-    serverKey = [info[1], info[2]]
-    for item in keyVals:
-        serverKey.append(item)
-    writeData(serverKey, info[0]+'_key')
+# generates keys for encryption
+pub, priv = rsa.newkeys(512)
+
+# dictionary for key building information
+keyInfo = getKeyInfo(priv)
+
+seedInfo['name'], seedInfo['address'], seedInfo['port'], seedInfo['buffer_size'], seedInfo['max_users'] = getInfo()
+
+data['seed'] = seedInfo
+data['key'] = keyInfo
+
+writeData(data)
