@@ -1,5 +1,6 @@
 import rsa
 
+# generates keys with a given bit size
 def genKeys(bit):
 
     (pubkey, privkey) = rsa.newkeys(bit)
