@@ -4,13 +4,12 @@ import socket, sys, threading, pickle, json
 # dict to contain client connections
 clients = {}
 
-# handles the initial connection of the client 
+# handles the initial connection of the client
 def handleConnection(conn, userAddr):
     while True:
         try:
             username = conn.recv(seed['buffer_size']).decode()
             newID = makeid()
-            print(newID)
             clients[newID] = (conn, userAddr, username)
             handleClient(conn, userAddr, username, newID)
             break
@@ -24,7 +23,6 @@ def handleClient(conn, userAddr, username, id):
 
         try:
             msg = conn.recv(seed['buffer_size'])
-            print(msg)
             if msg:
 
                 # couples data with address
@@ -36,7 +34,7 @@ def handleClient(conn, userAddr, username, id):
 
             else:
                 if id in clients:
-                    clients.remove(clients[id])
+                    clients.pop(clients[id], None)
 
         except OSError as e:
             print(e)
@@ -65,7 +63,7 @@ def broadcast(msg, conn, userAddr):
                 print(e)
                 client.close()
                 if id == client:
-                    clients.remove(client)
+                    clients.pop(client, None)
 
 # Loads the public and private key from the server seed
 def loadKeys(path):

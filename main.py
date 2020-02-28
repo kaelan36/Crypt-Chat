@@ -23,10 +23,14 @@ class Ui_MainWindow(object):
         self.msgIn.setGeometry(QtCore.QRect(290, 460, 241, 20))
         self.msgIn.setObjectName("msgIn")
         MainWindow.setCentralWidget(self.centralwidget)
+
+        # menu bar
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
         self.menubar.setObjectName("menubar")
+        self.menubar.setNativeMenuBar(False)
         MainWindow.setMenuBar(self.menubar)
+
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
@@ -63,7 +67,7 @@ class Ui_MainWindow(object):
         if pressed and name != '':
             return name
 
-def receive(ui):
+def receive(ui, server):
     while True:
         try:
             # receives data and separates actual message from the user address
@@ -96,38 +100,37 @@ def loadSeed(path):
         keyVals = data['key']
         serverInfo = data['seed']
 
-    return (serverInfo, keyVals)
+    pub = rsa.PublicKey(keyVals['n'], keyVals['e'])
+    priv = rsa.PrivateKey(keyVals['n'], keyVals['e'], keyVals['d'], keyVals['p'], keyVals['q'])
+    buffer_size = serverInfo['buffer_size']
 
+    return serverInfo, pub, priv, buffer_size
+
+# Connects to server
+def connect(address, port, ui, name):
+
+    # gets username
+    username = ui.getUsername(MainWindow)
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.connect((address, port))
+    server.send(bytes(username, 'utf8'))
+    ui.changeTitle(MainWindow, name)
+
+    threading.Thread(target=receive, args=(ui, server,)).start()
+    return server
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
 ui = Ui_MainWindow()
 ui.setupUi(MainWindow)
 
-# grabs path for seed
-seedPath = ui.getPath(MainWindow)
+# loads all the seed data, separates key values to make keys and the server info becomes the 'seed' on its own
+seed, pub, priv, buffSize = loadSeed(ui.getPath(MainWindow))
 
-# gets username
-username = ui.getUsername(MainWindow)
+server = connect(seed['address'], seed['port'], ui, seed['name'])
 
-# loads all the seed data
-seed = loadSeed(seedPath)
-pub = rsa.PublicKey(seed[1]['n'], seed[1]['e'])
-priv = rsa.PrivateKey(seed[1]['n'], seed[1]['e'], seed[1]['d'], seed[1]['p'], seed[1]['q'])
-buffSize = seed[0]['buffer_size']
-
-ui.changeTitle(MainWindow, seed[0]['name'])
-
-# connects to server
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.connect((seed[0]['address'], seed[0]['port']))
-
-# sends user info to server
-server.send(bytes(username, 'utf8'))
-
-threading.Thread(target=receive, args=(ui,)).start()
 MainWindow.show()
-
 sys.exit(app.exec_())
 
 server.close()
