@@ -56,6 +56,11 @@ class Ui_MainWindow(object):
         path = QtWidgets.QFileDialog.getOpenFileName(MainWindow, 'Load', './', "JSON Files (*.json)", '')
         return path[0]
 
+    def getUsername(self, MainWindow):
+        name, pressed = QtWidgets.QInputDialog.getText(MainWindow, 'Set username', 'Enter username:', QtWidgets.QLineEdit.Normal, '')
+        if pressed and name != '':
+            print(name)
+
 def receive(ui):
     while True:
         try:
@@ -99,6 +104,9 @@ ui.setupUi(MainWindow)
 
 # grabs path for seed
 seedPath = ui.getPath(MainWindow)
+
+# gets username
+username = ui.getUsername(MainWindow)
 
 # loads all the seed data
 seed = loadSeed(seedPath)
