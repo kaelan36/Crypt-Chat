@@ -2,6 +2,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from crypt_module import *
 import socket, threading, sys, rsa, pickle, json
 
+buffSize = 1024
+username = 'User'
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -59,13 +61,13 @@ class Ui_MainWindow(object):
     def getUsername(self, MainWindow):
         name, pressed = QtWidgets.QInputDialog.getText(MainWindow, 'Set username', 'Enter username:', QtWidgets.QLineEdit.Normal, '')
         if pressed and name != '':
-            print(name)
+            return name
 
 def receive(ui):
     while True:
         try:
             # receives data and separates actual message from the user address
-            msg = server.recv(2048)
+            msg = server.recv(buffSize)
             msg = pickle.loads(msg)
             msgString = decryptMsg(msg[0], priv)
             sender = str(msg[1])
@@ -112,12 +114,16 @@ username = ui.getUsername(MainWindow)
 seed = loadSeed(seedPath)
 pub = rsa.PublicKey(seed[1]['n'], seed[1]['e'])
 priv = rsa.PrivateKey(seed[1]['n'], seed[1]['e'], seed[1]['d'], seed[1]['p'], seed[1]['q'])
+buffSize = seed[0]['buffer_size']
 
 ui.changeTitle(MainWindow, seed[0]['name'])
 
 # connects to server
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.connect((seed[0]['address'], seed[0]['port']))
+
+# sends user info to server
+server.send(bytes(username, 'utf8'))
 
 threading.Thread(target=receive, args=(ui,)).start()
 MainWindow.show()
