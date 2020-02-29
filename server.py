@@ -1,6 +1,7 @@
 from crypt_module import *
 import socket, sys, threading, pickle, json
 
+"""
 # dict to contain client connections
 clients = {}
 
@@ -119,3 +120,33 @@ while True:
 
 conn.close()
 server.close()
+"""
+class Server:
+
+    clients = []
+
+    class Client:
+
+        def __init__(self, name, addr, conn):
+            self.name = name
+            self.address = addr
+            self.conn = conn
+            self.id = self.makeId(clients)
+
+        # Makes an id from the list of clients that is being used
+        def makeId(clientList):
+
+            # list for temporarily storings IDs
+            allIds = []
+
+            # loops through client list and grabs the IDs
+            for c in clientList:
+                allIds.append(c.id)
+
+            # sorts IDs so that the final one is the largest
+            allIds = sorted(allIds)
+
+            # grabs the largest ID and increments it by 1 to return a new ID
+            newId = allIds[-1] + 1
+
+            return newId
