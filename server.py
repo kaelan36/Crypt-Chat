@@ -1,140 +1,109 @@
 from crypt_module import *
 import socket, sys, threading, pickle, json
 
-"""
-# dict to contain client connections
-clients = {}
-
-# handles the initial connection of the client
-def handleConnection(conn, userAddr):
-    while True:
-        try:
-            username = conn.recv(seed['buffer_size']).decode()
-            newID = makeid()
-            clients[newID] = (conn, userAddr, username)
-            handleClient(conn, userAddr, username, newID)
-            break
-        except Exception as e:
-            print('[!] Error while connecting to client: ' + str(e))
-
-# Handles client connections
-def handleClient(conn, userAddr, username, id):
-
-    while True:
-
-        try:
-            msg = conn.recv(seed['buffer_size'])
-            if msg:
-
-                # couples data with address
-                data = (msg, username)
-                msg = pickle.dumps(data)
-
-                # sends message to other connections
-                broadcast(msg, conn, userAddr)
-
-            else:
-                if id in clients:
-                    clients.pop(clients[id], None)
-
-        except OSError as e:
-            print(e)
-            break
-
-# makes ids for clients
-def makeid():
-    ids = []
-    for c in clients:
-        ids.append(c)
-    if len(clients) == 0:
-        return 1
-    else:
-        return max(i for i in ids)+1
-
-# broadcasts message to all users that are connected
-def broadcast(msg, conn, userAddr):
-
-    for client in clients:
-
-        if clients[client][0] != conn:
-            print('[!] Not client')
-            try:
-                clients[client][0].send(msg)
-            except OSError as e:
-                print(e)
-                client.close()
-                if id == client:
-                    clients.pop(client, None)
-
-# Loads the public and private key from the server seed
-def loadKeys(path):
-
-    # for the values needed to build keys
-    keyInfo = []
-
-    with open(path, 'r') as file:
-
-        data = json.load(file)
-
-        for val in data['key']:
-            keyInfo.append(data['key'][val])
-
-    pub = rsa.PublicKey(keyInfo[0], keyInfo[1])
-    priv = rsa.PrivateKey(keyInfo[0], keyInfo[1], keyInfo[2], keyInfo[3], keyInfo[4])
-
-    return pub, priv
-
-# loads info from server seed and returns dictionary of it
-def loadSeed(path):
-
-    # dictionary with seed info
-    seed = {}
-
-    with open(path, 'r') as file:
-        data = json.load(file)
-        seed = data['seed']
-
-    return seed
-
-
-# grabs the server info from seed
-seedPath = str(input('Enter path for server seed: '))
-seed = loadSeed(seedPath)
-pub, priv = loadKeys(seedPath)
-
-# Creates socket for connecting
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# binds the socket to the address and port
-server.bind((seed['address'], seed['port']))
-
-# listens for connections
-server.listen(seed['max_users'])
-print('[*] Server initialized\n[*] Listening for connections...')
-
-while True:
-
-    conn, clientAddr = server.accept()
-
-    threading.Thread(target=handleConnection, args=(conn, clientAddr,)).start()
-
-conn.close()
-server.close()
-"""
 class Server:
 
     clients = []
 
+    def __init__(self, path):
+        print('[*] Initializing server...')
+        self.info, self.pub, self.priv = self.loadSeed(path)
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.bind((self.info['address'], self.info['port']))
+        print('[*] Seed loaded, server binding %s:%s' % (self.info['address'], self.info['port']))
+        self.start()
+
+    # starts server
+    def start(self):
+        try:
+            self.server.listen(self.info['max_users'])
+            print('[*] Listening for clients...')
+
+            while True:
+                conn, addr = self.server.accept()
+                threading.Thread(target=self.handleClient, args=(conn, addr,)).start()
+
+        except Exception as e:
+
+            print('[!] Error while handling a connection: ' + str(e))
+
+    # handles client connections
+    def handleClient(self, conn, addr):
+        try:
+
+            # gets username from header connection message
+            username = conn.recv(self.info['buffer_size']).decode()
+            client = self.Client(self, username, addr, conn)
+            self.clients.append(client)
+
+            # loops to receive messages from the client
+            while True:
+                try:
+                    msg = conn.recv(self.info['buffer_size'])
+                    if msg:
+                        # merges message with the sender's username
+                        data = pickle.dumps((msg, username))
+                        self.broadcast(data, client)
+                    else:
+                        for c in self.clients:
+                            if c.id == client.id:
+                                try:
+                                    self.clients.remove(c)
+                                except:
+                                    print('[!] Tried to remove client, ran into an error.\nClosing connection')
+                                c.conn.close()
+                                break
+                except Exception as e:
+                    print('[!] Error while receiving client messsage: ' + str(e))
+
+        except Exception as e:
+            print('[!] Error while setting up client: ' + str(e))
+
+    def broadcast(self, msg, client):
+
+        # loops through clients and sends the message if they aren't the sender
+        for c in self.clients:
+
+            if c != client:
+                try:
+                    c.conn.send(msg)
+                except Exception as e:
+                    print(e)
+                    c.conn.close()
+                    clients.remove(c)
+
+    def loadSeed(self, path):
+
+        # data loaded from JSON file
+        seed = {}
+
+        with open(path, 'r') as file:
+            seed = json.load(file)
+
+        # server info to build from
+        info = seed['seed']
+        keys = seed['key']
+
+        # builds keys from data
+        pub = rsa.PublicKey(keys['n'], keys['e'])
+        priv = rsa.PrivateKey(keys['n'], keys['e'], keys['d'], keys['p'], keys['q'])
+
+        return info, pub, priv
+
     class Client:
 
-        def __init__(self, name, addr, conn):
+        def __init__(self, server, name, addr, conn):
+            self.server = server
             self.name = name
             self.address = addr
             self.conn = conn
-            self.id = self.makeId(clients)
+            self.id = self.makeId(server.clients)
 
         # Makes an id from the list of clients that is being used
-        def makeId(clientList):
+        def makeId(self, clientList):
+
+            if len(clientList) == 0:
+                return 1
 
             # list for temporarily storings IDs
             allIds = []
@@ -150,3 +119,9 @@ class Server:
             newId = allIds[-1] + 1
 
             return newId
+
+if __name__ == '__main__':
+    seedPath = str(input('Enter path for seed: '))
+    server = Server(seedPath)
+    server.start()
+    server.server.close()
