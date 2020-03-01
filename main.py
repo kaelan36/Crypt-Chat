@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from crypt_module import *
+from make_seed import initSeedGen
 import socket, threading, sys, rsa, pickle, json, os
 
 # Class of the Main Window that will be used for display
@@ -138,7 +139,7 @@ class uiMainWindow(object):
         self.createBtn.setObjectName('createBtn')
         self.createBtn.setText('Generate')
         self.createBtn.setGeometry(QtCore.QRect(245, 245, 100, 25))
-        #self.createBtn.clicked.connect()
+        self.createBtn.clicked.connect(self.spawnSeed)
 
         self.backBtn = QtWidgets.QPushButton(self.centralWidget)
         self.backBtn.setObjectName('backbtn')
@@ -148,6 +149,15 @@ class uiMainWindow(object):
 
         self.MainWindow.setCentralWidget(self.centralWidget)
 
+
+    def spawnSeed(self):
+        filename = initSeedGen(self.nameIn.text(), self.addrIn.text(), int(self.portIn.text()), int(self.buffIn.text()), int(self.maxIn.text()))
+        msg = "Seed was saved in this directory as: " + filename
+        popup = QtWidgets.QMessageBox()
+        popup.setWindowTitle('Seed generated successfully')
+        popup.setText(msg)
+        popup.exec_()
+        self.mainMenu()
 
     def createProfile(self):
         pass
