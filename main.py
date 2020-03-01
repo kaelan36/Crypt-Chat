@@ -4,7 +4,7 @@ from make_seed import initSeedGen
 import socket, threading, sys, rsa, pickle, json, os
 
 # Class of the Main Window that will be used for display
-class uiMainWindow(object):
+class uiMainWindow(QtWidgets.QMainWindow):
     def __init__(self, MainWindow):
         self.MainWindow = MainWindow
         MainWindow.setObjectName('MainWindow')
@@ -65,6 +65,7 @@ class uiMainWindow(object):
         self.enterBtn.setObjectName("enterBtn")
         self.enterBtn.setText('Send')
         self.enterBtn.clicked.connect(self.sendMsg)
+        self.enterBtn.setShortcut("Return")
 
         self.output = QtWidgets.QTextEdit(self.centralWidget)
         self.output.setGeometry(QtCore.QRect(80, 30, 641, 381))
@@ -77,6 +78,7 @@ class uiMainWindow(object):
 
         MainWindow.setCentralWidget(self.centralWidget)
 
+    # Changes window to prompt the user for information to generate a seed
     def createSeed(self):
 
         self.MainWindow.resize(400, 300)
@@ -140,6 +142,7 @@ class uiMainWindow(object):
         self.createBtn.setText('Generate')
         self.createBtn.setGeometry(QtCore.QRect(245, 245, 100, 25))
         self.createBtn.clicked.connect(self.spawnSeed)
+        self.createBtn.setShortcut("Return")
 
         self.backBtn = QtWidgets.QPushButton(self.centralWidget)
         self.backBtn.setObjectName('backbtn')
@@ -149,39 +152,56 @@ class uiMainWindow(object):
 
         self.MainWindow.setCentralWidget(self.centralWidget)
 
-
+    # Generates a seed from the inputs given
     def spawnSeed(self):
+
         filename = initSeedGen(self.nameIn.text(), self.addrIn.text(), int(self.portIn.text()), int(self.buffIn.text()), int(self.maxIn.text()))
         msg = "Seed was saved in this directory as: " + filename
+
         popup = QtWidgets.QMessageBox()
         popup.setWindowTitle('Seed generated successfully')
         popup.setText(msg)
+
         popup.exec_()
         self.mainMenu()
 
+    # Allows the user to create a profile for when they join servers
     def createProfile(self):
         pass
 
+    # Grabs message from input box and opens thread to send it to server
     def sendMsg(self):
         msg = self.msgIn.text()
+        self.msgIn.setText('')
         if msg == '!quit!':
             server.close()
             self.mainMenu()
         else:
             threading.Thread(target=send, args=(self, msg,)).start()
 
+    # Prompts the user to select a JSON file
     def getPath(self):
         path = QtWidgets.QFileDialog.getOpenFileName(self.MainWindow, 'Load', './', 'JSON Files (*.json)', '')
         return path[0]
 
+    # Prompts the user to input a display name
     def getUsername(self):
         name, pressed = QtWidgets.QInputDialog.getText(self.MainWindow, 'Set username', 'Enter username:', QtWidgets.QLineEdit.Normal, '')
         if pressed and name != '':
             return name
 
+    # for changing the title of the window
     def changeTitle(self, title):
         _translate = QtCore.QCoreApplication.translate
         self.MainWindow.setWindowTitle(_translate('MainWindow', title))
+
+    # makes sure to close server connection on the close of the window
+    def closeEvent(self, event):
+        try:
+            self.server.close()
+        except:
+            pass
+        event.accept()
 
     def exit(self):
         quit()
@@ -243,10 +263,11 @@ def connect(ui, address, port, name, priv):
     # opens thread to receive messages from server
     threading.Thread(target=receive, args=(ui, server, priv,)).start()
     return server
+if __name__ == '__main__':
 
-app = QtWidgets.QApplication(sys.argv)
-MainWindow = QtWidgets.QMainWindow()
-ui = uiMainWindow(MainWindow)
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = uiMainWindow(MainWindow)
 
-MainWindow.show()
-sys.exit(app.exec_())
+    MainWindow.show()
+    sys.exit(app.exec_())

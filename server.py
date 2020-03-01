@@ -51,6 +51,7 @@ class Server:
             username = conn.recv(self.info['buffer_size']).decode()
             client = self.Client(self, username, addr, conn)
             self.clients.append(client)
+            print('[*] %s has connected: %s:%s' % (client.name, client.address[0], str(client.address[1])))
 
             # loops to receive messages from the client
             while True:
@@ -62,20 +63,19 @@ class Server:
                         data = pickle.dumps((msg, username))
                         self.broadcast(data, client)
                     else:
-                        # loops through clients to find the matching ID to remove the client
-                        for c in self.clients:
-                            if c.id == client.id:
-                                try:
-                                    self.clients.remove(c)
-                                except:
-                                    print('[!] Tried to remove client, ran into an error.\nClosing connection')
-                                c.conn.close()
-                                break
+                        conn.close()
+                        print('[*] Client disconnected: %s:%s' % (addr[0], addr[1]))
+
                 except Exception as e:
                     print('[!] Error while receiving client messsage: ' + str(e))
+                    conn.close()
+                    print('[*] Client disconnected: %s:%s' % (addr[0], addr[1]))
+                    break
 
         except Exception as e:
             print('[!] Error while setting up client: ' + str(e))
+            conn.close()
+            print('[*] Client disconnected: %s:%s' % (addr[0], addr[1]))
 
     def broadcast(self, msg, client):
 
