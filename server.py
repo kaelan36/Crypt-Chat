@@ -1,3 +1,18 @@
+"""
+Crypt-Chat Server module
+
+Author: Kaelan Renaud
+
+Date: February 29th, 2020
+
+Version: 2.0
+
+The Server module handles the intialization and the operation of the server. There are two classes: Server and Client. The Client class is
+nested inside the Server class. The Server class only needs a path for the seed to instantiate. Client objects will automatically be
+instantiated once a client connects to the server. Server objects will handle all the traffic and broadcasting.
+"""
+
+
 from crypt_module import *
 import socket, sys, threading, pickle, json
 
@@ -16,21 +31,22 @@ class Server:
     # starts server
     def start(self):
         try:
+            # gets the maximum amount of users from the seed and starts listening for connections
             self.server.listen(self.info['max_users'])
             print('[*] Listening for clients...')
 
+            # loops to continuously accept connections and start a thread to handle the client
             while True:
                 conn, addr = self.server.accept()
                 threading.Thread(target=self.handleClient, args=(conn, addr,)).start()
 
         except Exception as e:
-
             print('[!] Error while handling a connection: ' + str(e))
 
     # handles client connections
     def handleClient(self, conn, addr):
-        try:
 
+        try:
             # gets username from header connection message
             username = conn.recv(self.info['buffer_size']).decode()
             client = self.Client(self, username, addr, conn)
@@ -39,12 +55,14 @@ class Server:
             # loops to receive messages from the client
             while True:
                 try:
+                    # receives incoming messages from the client
                     msg = conn.recv(self.info['buffer_size'])
                     if msg:
                         # merges message with the sender's username
                         data = pickle.dumps((msg, username))
                         self.broadcast(data, client)
                     else:
+                        # loops through clients to find the matching ID to remove the client
                         for c in self.clients:
                             if c.id == client.id:
                                 try:

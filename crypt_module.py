@@ -1,3 +1,17 @@
+"""
+Crypt-Chat Encryption module
+
+Author: Kaelan Renaud
+
+Date: February 25th, 2020
+
+Version: 1.0
+
+This module handles the encryption and decryption operations of the project. It uses the RSA module to do this. It uses asymmetrical
+cryptography to encrypt and decrypt data. It can also generate keys for the encryption.
+"""
+
+
 import rsa
 
 # generates keys with a given bit size
