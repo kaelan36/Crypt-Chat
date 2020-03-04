@@ -1,1 +1,10 @@
-Crypt-Chat is a chatting application that uses asymmetrical cryptography to keep communications hidden. There are two parts to the project: the server/server creation and the client-side GUI. To create a server 'seed', use the createServer.py program and follow the prompts. To start your server, run the server.py program and input the path for the JSON seed that was made. It will then run the server and allow for connections. To connect to the server as client, run the main.py program and select the same JSON file used to load the server; this file not only acts as a 'seed' for the server, but also as a key to get into the server. Then, you can use the application with a chatroom-like function.
+# Crypt-Chat
+### Version 2.0
+Crypt-Chat is a chatting application that allows users to easily make their own servers to chat privately. The transmissions are encrypted using RSA 512-bit encryption. 
+Users are able to generate a server 'seed' using the GUI application, which will be used to run the server from. If you want someone to join your server, you would give them the seed file, as it can be used to connect to a server as well. The seed contains the public and private key values necessary to encrypt and decrypt the messages. The seed also contains the IP and port to connect to.
+
+## Dependencies (Python 3)
+* PyQT5
+* rsa
+* pickle
+* json
